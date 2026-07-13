@@ -50,8 +50,8 @@ DCCA 2019 Shapefile ──────────── (point-in-polygon match
 
 ### Step 1 — Scrape LCSD Gym Data (`20190131_GymRoom.py`)
 
-Scrapes the [LCSD Fitness Rooms listing page](https://www.lcsd.gov.hk/clpss/tc/webApp/FitnessRooms.do) and for each venue:
-
+- **Gym listings:** [LCSD Fitness Rooms (data.gov.hk)](https://www.lcsd.gov.hk/clpss/tc/webApp/FitnessRooms.do)
+- **Shapefile:** [DCCA 2019 — Hong Kong District Council Constituency Areas](https://data.gov.hk/) from the Electoral Affairs Commission
 - Extracts **venue name**, **address**, and **telephone number**
 - Geocodes the address via **Google Maps Geocoding API** (`GeoAPI.py`) to get **latitude/longitude**
   - Falls back to querying the venue name if the address geocoding fails
@@ -139,3 +139,4 @@ Open `district identifier.ipynb` in Jupyter and run all cells. The script reads 
 
 - **Gym listings:** [LCSD Fitness Rooms (data.gov.hk)](https://www.lcsd.gov.hk/clpss/tc/webApp/FitnessRooms.do)
 - **Shapefile:** [DCCA 2019 — Hong Kong District Council Constituency Areas](https://data.gov.hk/) from the Electoral Affairs Commission
+>>>>>>> a44a45680a6fd23171db54a9ab74148746df59b0
