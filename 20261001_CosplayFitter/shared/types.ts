@@ -69,6 +69,7 @@ export interface PlaceSnapshot {
   dateLabel: string;
   temperatureC: number | null;
   notice: string;
+  regionLabel?: string;
 }
 
 export interface StyleDirection {

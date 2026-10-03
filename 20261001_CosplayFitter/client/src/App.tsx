@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCharacter } from "@shared/acg.ts";
 import { estimateFitting } from "@shared/estimate.ts";
-import { climateFromPlace, placeLine } from "@shared/place.ts";
-import { MAX_NOTE_LENGTH, MAX_PREVIEWS, MIN_PREVIEWS, MODEL_ID, MODEL_LABEL, PLACE_UNAVAILABLE, REGION_BLOCK_MESSAGE, type ActualUsage, type Outfit, type PlaceSnapshot, type Resolution, type TokenEstimate } from "@shared/types.ts";
+import { climateFromPlace, placeLine, regionBlockMessage } from "@shared/place.ts";
+import { MAX_NOTE_LENGTH, MAX_PREVIEWS, MIN_PREVIEWS, MODEL_ID, MODEL_LABEL, PLACE_UNAVAILABLE, type ActualUsage, type Outfit, type PlaceSnapshot, type Resolution, type TokenEstimate } from "@shared/types.ts";
 import { CosplayPicker } from "./components/CosplayPicker";
 import { PhotoDrop } from "./components/PhotoDrop";
 import { PreviewWall, type PreviewCardModel } from "./components/PreviewWall";
@@ -166,7 +166,7 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
   }
 
   const blockReason = regionBlocked
-    ? REGION_BLOCK_MESSAGE
+    ? regionBlockMessage(place?.regionLabel ?? "")
     : !topicId
     ? "Choose a topic."
     : !characterId
@@ -305,11 +305,11 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
           ) : null}
         </div>
         <p className="place" data-testid="place-line">
-          {place ? placeLine(place) : "Reading your connection…"}
+          {place ? placeLine(place) : "Checking Hong Kong weather…"}
         </p>
         {regionBlocked ? (
           <p className="banner" role="alert" data-testid="region-block">
-            {REGION_BLOCK_MESSAGE}
+            {regionBlockMessage(place?.regionLabel ?? "")}
           </p>
         ) : null}
         <p className="lede">

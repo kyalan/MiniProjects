@@ -30,7 +30,7 @@ You can leave the Gemini key blank and paste it into the page instead. Either wa
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. Sign in with the ID and password from `.env.local`. The process listens on this computer only.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Sign in with the ID and password from `.env.local`. The process listens on this computer only.
 
 `npm test` runs the tests. `npm start` builds the page and serves that build.
 
@@ -38,7 +38,7 @@ Open http://127.0.0.1:3000. Sign in with the ID and password from `.env.local`. 
 
 This studio calls the Gemini API with a Google AI Studio key. Google’s [available regions](https://ai.google.dev/gemini-api/docs/available-regions) list does not include Hong Kong or Mainland China. The Gemini app on the web or on a phone can be open in Hong Kong while this API still refuses the call.
 
-The page looks up this machine’s public IP. If that place is Mainland China or Hong Kong, Generate stays off and the page shows: “The LLM is not available in your current region.” A VM in `asia-east2` (Hong Kong) does the same, because the lookup uses the VM’s address.
+The page looks up this machine’s public IP and compares that country with Google’s current [available regions](https://ai.google.dev/gemini-api/docs/available-regions). The Hong Kong weather line is not part of that check. If the looked-up country is missing from the list, including Mainland China and Hong Kong, Generate stays off and the page names that looked-up place. A VM in `asia-east2` (Hong Kong) does the same, because the lookup uses the VM’s address.
 
 For this job — keep one face and follow a character costume — the image model offered in Hong Kong is Qwen-Image on Alibaba Cloud Model Studio, Hong Kong region (`qwen-image-3.0`, or the current Qwen image-edit model). That endpoint accepts reference images for editing. This project does not call it. Seedream and Flux can also generate clothes, and they are also not wired in here.
 
@@ -74,13 +74,16 @@ Sign-in is required, and it is not a substitute for keeping the port closed. Lea
 
 In the Cloud console, or with the gcloud CLI, create an Ubuntu VM in one of the regions above. Do not add a firewall rule for port 3000. The default SSH rule is enough.
 
-### 2. Install Node.js 20
+### 2. Install Git and Node.js 20
 
-SSH into the VM, then:
+A new Ubuntu VM does not include Git. SSH into the VM, then:
 
 ```bash
+sudo apt-get update
+sudo apt-get install -y git
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
+git --version
 node -v
 ```
 
@@ -114,33 +117,24 @@ npm start
 
 ### 4. Keep it running
 
-Stop the foreground process, then add a systemd service. Create `/etc/systemd/system/cosplay-fitter.service`:
-
-```ini
-[Unit]
-Description=Cosplay Fitter
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=/opt/miniprojects/20261001_CosplayFitter
-ExecStart=/usr/bin/npm start
-Restart=on-failure
-User=YOUR_USER
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Replace `YOUR_USER` with the account that owns `/opt/miniprojects`.
+Stop the foreground process with Ctrl-C. Install tmux if this VM does not have it, then start the page inside a session named `cosplay-fitter`:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now cosplay-fitter
-sudo systemctl status cosplay-fitter
+sudo apt-get install -y tmux
+cd /opt/miniprojects/20261001_CosplayFitter
+tmux new -s cosplay-fitter
+npm start
 ```
 
-`npm start` builds on every restart. That is the intended production command.
+`npm start` builds the page, then serves it. Leave that session with Ctrl-b, then d. Closing the SSH connection does not stop the session.
+
+Open the session again with:
+
+```bash
+tmux attach -t cosplay-fitter
+```
+
+After the VM reboots, the session is gone. SSH in and run `tmux new -s cosplay-fitter` and `npm start` again.
 
 ### 5. Open the page from your computer
 
@@ -150,14 +144,22 @@ From your own computer, not from the VM:
 gcloud compute ssh VM_NAME --zone=ZONE -- -L 3000:127.0.0.1:3000
 ```
 
-Leave that session open and visit http://127.0.0.1:3000. Sign in with the ID and password from the VM's `.env.local`. The tunnel ends when you close the SSH session.
+Leave that session open and visit [http://127.0.0.1:3000](http://127.0.0.1:3000). Sign in with the ID and password from the VM's `.env.local`. The tunnel ends when you close the SSH session.
 
-To update the VM after a later GitHub push:
+To update the VM after a later GitHub push, attach the session, stop the page with Ctrl-C, then start it again:
 
 ```bash
 cd /opt/miniprojects
 git pull
-sudo systemctl restart cosplay-fitter
+tmux attach -t cosplay-fitter
 ```
 
-The place line on the page is the VM’s public location, not the city you are sitting in. Date and temperature in the outfit prompts follow that VM location.
+Inside the session:
+
+```bash
+npm start
+```
+
+Leave the session again with Ctrl-b, then d.
+
+The place line is always Hong Kong. Date and temperature in the outfit prompts follow Hong Kong weather from the web, not the city you are sitting in and not the VM’s public location. Whether Gemini is available is a separate lookup of this machine’s public IP against Google’s current available regions.

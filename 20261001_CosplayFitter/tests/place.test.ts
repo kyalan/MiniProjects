@@ -1,16 +1,17 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { climateFromPlace, formatDateLabel, isBlockedPlace, placeLine } from "../shared/place.ts";
-import { PLACE_UNAVAILABLE } from "../shared/types.ts";
+import { climateFromPlace, formatDateLabel, isBlockedPlace, placeLine, regionBlockMessage } from "../shared/place.ts";
 import { clearPlaceCache, lookupPlace, readPlace } from "../server/place.ts";
 
 const HONG_KONG_IP = "203.0.113.8";
+const HONG_KONG_LATITUDE = "22.3022";
+const HONG_KONG_LONGITUDE = "114.1744";
 
 function geo(body: Record<string, unknown>) {
   return {
     success: true,
-    latitude: 22.3,
-    longitude: 114.2,
-    timezone: { id: "Asia/Hong_Kong" },
+    latitude: 35.66,
+    longitude: 139.7,
+    timezone: { id: "Asia/Tokyo" },
     ip: HONG_KONG_IP,
     ...body,
   };
@@ -28,34 +29,56 @@ function fetchPlaces(options: { geo: unknown; weather?: unknown; weatherStatus?:
   };
 }
 
+function expectHongKongWeatherRequest(url: string) {
+  const params = new URL(url).searchParams;
+  expect(params.get("latitude")).toBe(HONG_KONG_LATITUDE);
+  expect(params.get("longitude")).toBe(HONG_KONG_LONGITUDE);
+  expect(params.get("timezone")).toBe("Asia/Hong_Kong");
+  expect(params.get("current")).toBe("temperature_2m");
+}
+
 describe("place lookup", () => {
   afterEach(() => {
     clearPlaceCache();
   });
 
-  it("blocks Hong Kong and mainland China, and leaves another country open", () => {
+  it("blocks regions missing from Gemini's available list, and leaves listed regions open", () => {
     expect(isBlockedPlace({ countryCode: "HK", country: "Hong Kong", city: "Kowloon", region: "Kowloon" })).toBe(true);
     expect(isBlockedPlace({ countryCode: "CN", country: "China", city: "Shenzhen", region: "Guangdong" })).toBe(true);
+    expect(isBlockedPlace({ countryCode: "MO", country: "Macao", city: "Macau", region: "Macao" })).toBe(true);
     expect(isBlockedPlace({ countryCode: "", country: "China", city: "Hong Kong", region: "Hong Kong" })).toBe(true);
     expect(isBlockedPlace({ countryCode: "JP", country: "Japan", city: "Shibuya", region: "Tokyo" })).toBe(false);
+    expect(isBlockedPlace({ countryCode: "TW", country: "Taiwan", city: "Taipei", region: "Taiwan" })).toBe(false);
+    expect(isBlockedPlace({ countryCode: "SG", country: "Singapore", city: "Singapore", region: "Singapore" })).toBe(false);
+    expect(isBlockedPlace({ countryCode: "JP", country: "Japan", city: "Hong Kong", region: "Hong Kong" })).toBe(false);
   });
 
-  it("reads Hong Kong from the public IP and the local temperature", async () => {
-    const place = await readPlace(
-      fetchPlaces({
+  it("shows Hong Kong weather and still blocks a Hong Kong address", async () => {
+    let weatherUrl = "";
+    const place = await readPlace(async (input) => {
+      const url = String(input);
+      if (url.includes("open-meteo.com")) weatherUrl = url;
+      return fetchPlaces({
         geo: geo({ city: "Kowloon", region: "Kowloon", country: "Hong Kong", country_code: "HK" }),
-      }),
-    );
+      })(input, {});
+    });
+    expectHongKongWeatherRequest(weatherUrl);
     expect(place.blocked).toBe(true);
-    expect(place.label).toBe("Kowloon, Hong Kong");
+    expect(place.label).toBe("Hong Kong");
+    expect(place.regionLabel).toBe("Kowloon, Hong Kong");
+    expect(regionBlockMessage(place.regionLabel ?? "")).toBe("The LLM is not available in Kowloon, Hong Kong.");
     expect(place.dateLabel).toBe("Monday 28 September 2026");
     expect(place.temperatureC).toBe(29);
-    expect(placeLine(place)).toBe("Kowloon, Hong Kong · Monday 28 September 2026 · 29°C");
+    expect(placeLine(place)).toBe("Hong Kong · Monday 28 September 2026 · 29°C");
     expect(JSON.stringify(place)).not.toContain(HONG_KONG_IP);
-    expect(climateFromPlace(place)?.temperatureC).toBe(29);
+    expect(climateFromPlace(place)).toEqual({
+      placeLabel: "Hong Kong",
+      dateLabel: "Monday 28 September 2026",
+      temperatureC: 29,
+    });
   });
 
-  it("blocks a mainland China fixture", async () => {
+  it("blocks a mainland China address and still shows Hong Kong", async () => {
     const place = await readPlace(
       fetchPlaces({
         geo: geo({
@@ -69,19 +92,40 @@ describe("place lookup", () => {
       }),
     );
     expect(place.blocked).toBe(true);
-    expect(place.label).toBe("Shenzhen, Guangdong, China");
+    expect(place.label).toBe("Hong Kong");
+    expect(place.regionLabel).toBe("Shenzhen, Guangdong, China");
+    expect(place.temperatureC).toBe(31);
   });
 
-  it("does not block when the lookup fails", async () => {
-    const place = await readPlace(fetchPlaces({ geo: new Error("offline") }));
-    expect(place.ok).toBe(false);
+  it("shows Hong Kong weather for a place that can call Gemini", async () => {
+    let weatherUrl = "";
+    const place = await readPlace(async (input) => {
+      const url = String(input);
+      if (url.includes("open-meteo.com")) weatherUrl = url;
+      return fetchPlaces({
+        geo: geo({ city: "Shibuya", region: "Tokyo", country: "Japan", country_code: "JP" }),
+      })(input, {});
+    });
+    expectHongKongWeatherRequest(weatherUrl);
+    expect(place.ok).toBe(true);
     expect(place.blocked).toBe(false);
-    expect(place.temperatureC).toBeNull();
-    expect(placeLine(place)).toBe(PLACE_UNAVAILABLE);
-    expect(climateFromPlace(place)).toBeNull();
+    expect(place.label).toBe("Hong Kong");
+    expect(place.regionLabel).toBe("Shibuya, Tokyo, Japan");
+    expect(place.temperatureC).toBe(29);
+    expect(placeLine(place)).toBe("Hong Kong · Monday 28 September 2026 · 29°C");
   });
 
-  it("keeps the place when the weather lookup fails and does not invent a temperature", async () => {
+  it("does not block when the address lookup fails", async () => {
+    const place = await readPlace(fetchPlaces({ geo: new Error("offline") }));
+    expect(place.ok).toBe(true);
+    expect(place.blocked).toBe(false);
+    expect(place.label).toBe("Hong Kong");
+    expect(place.regionLabel).toBe("");
+    expect(place.temperatureC).toBe(29);
+    expect(climateFromPlace(place)?.placeLabel).toBe("Hong Kong");
+  });
+
+  it("keeps Hong Kong when the weather lookup fails and does not invent a temperature", async () => {
     const place = await readPlace(
       fetchPlaces({
         geo: geo({ city: "Shibuya", region: "Tokyo", country: "Japan", country_code: "JP" }),
@@ -91,8 +135,10 @@ describe("place lookup", () => {
     );
     expect(place.ok).toBe(true);
     expect(place.blocked).toBe(false);
+    expect(place.label).toBe("Hong Kong");
     expect(place.temperatureC).toBeNull();
     expect(place.dateLabel).toBe("Monday 28 September 2026");
+    expect(placeLine(place)).toBe("Hong Kong · Monday 28 September 2026");
     expect(climateFromPlace(place)).toBeNull();
   });
 

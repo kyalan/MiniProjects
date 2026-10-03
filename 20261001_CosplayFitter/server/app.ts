@@ -2,13 +2,12 @@ import { access } from "node:fs/promises";
 import path from "node:path";
 import express, { type Express, type Request } from "express";
 import { estimateFitting } from "../shared/estimate.ts";
-import { climateFromPlace } from "../shared/place.ts";
+import { climateFromPlace, regionBlockMessage } from "../shared/place.ts";
 import { SAMPLE_OUTFIT, buildImagePrompt, stylistPromptFor } from "../shared/prompts.ts";
 import {
   ASPECT_RATIO,
   MODEL_ID,
   MODEL_LABEL,
-  REGION_BLOCK_MESSAGE,
   type ActualUsage,
   type Climate,
   type FittingInput,
@@ -192,7 +191,7 @@ export async function createApp(options: AppOptions): Promise<Express> {
   app.post("/api/estimate", async (req, res) => {
     const place = await resolvePlace();
     if (place.blocked) {
-      res.status(403).json({ error: REGION_BLOCK_MESSAGE });
+      res.status(403).json({ error: regionBlockMessage(place.regionLabel ?? "") });
       return;
     }
     const secret = resolveKey(req);
@@ -240,7 +239,7 @@ export async function createApp(options: AppOptions): Promise<Express> {
   app.post("/api/generate", async (req, res) => {
     const place = await resolvePlace();
     if (place.blocked) {
-      res.status(403).json({ error: REGION_BLOCK_MESSAGE });
+      res.status(403).json({ error: regionBlockMessage(place.regionLabel ?? "") });
       return;
     }
     const secret = resolveKey(req);

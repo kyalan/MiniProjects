@@ -4,7 +4,7 @@ import path from "node:path";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp, type AppOptions } from "../server/app.ts";
-import { REGION_BLOCK_MESSAGE, type PlaceSnapshot } from "../shared/types.ts";
+import { type PlaceSnapshot } from "../shared/types.ts";
 
 const OPEN_PLACE: PlaceSnapshot = {
   ok: true,
@@ -340,7 +340,8 @@ describe("fitting API", () => {
     const blocked: PlaceSnapshot = {
       ok: true,
       blocked: true,
-      label: "Kowloon, Hong Kong",
+      label: "Hong Kong",
+      regionLabel: "Shenzhen, Guangdong, China",
       dateLabel: "Monday 28 September 2026",
       temperatureC: 29,
       notice: "",
@@ -352,11 +353,11 @@ describe("fitting API", () => {
 
     const estimate = await request(app).post("/api/estimate").set("x-gemini-key", SECRET).send(fittingBody(1));
     expect(estimate.status).toBe(403);
-    expect(estimate.body.error).toBe(REGION_BLOCK_MESSAGE);
+    expect(estimate.body.error).toBe("The LLM is not available in Shenzhen, Guangdong, China.");
 
     const generate = await request(app).post("/api/generate").set("x-gemini-key", SECRET).send(fittingBody(1));
     expect(generate.status).toBe(403);
-    expect(generate.body.error).toBe(REGION_BLOCK_MESSAGE);
+    expect(generate.body.error).toBe("The LLM is not available in Shenzhen, Guangdong, China.");
     expect(gemini.calls).toHaveLength(0);
   });
 });
