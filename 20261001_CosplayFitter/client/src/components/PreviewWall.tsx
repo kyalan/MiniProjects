@@ -14,13 +14,15 @@ interface PreviewWallProps {
   cards: PreviewCardModel[];
   phase: "idle" | "styling" | "rendering" | "done";
   characterName: string;
+  admin: boolean;
   session: { id: string; path: string } | null;
   onDownloadZip: () => void;
   onReveal: () => void;
 }
 
-export function PreviewWall({ cards, phase, characterName, session, onDownloadZip, onReveal }: PreviewWallProps) {
+export function PreviewWall({ cards, phase, characterName, admin, session, onDownloadZip, onReveal }: PreviewWallProps) {
   const ready = cards.filter((card) => card.status === "ready").length;
+  const sessionTools = admin ? session : null;
   return (
     <section className="wall">
       <header className="wall-head">
@@ -28,7 +30,7 @@ export function PreviewWall({ cards, phase, characterName, session, onDownloadZi
           <p className="eyebrow">Preview wall</p>
           <h2>{characterName ? `Looks for ${characterName}` : "Looks"}</h2>
         </div>
-        {session ? (
+        {sessionTools ? (
           <div className="wall-actions">
             <button type="button" data-testid="download-zip" onClick={onDownloadZip}>
               Download backup
@@ -39,9 +41,9 @@ export function PreviewWall({ cards, phase, characterName, session, onDownloadZi
           </div>
         ) : null}
       </header>
-      {session ? (
+      {sessionTools ? (
         <p className="session-path" data-testid="session-path">
-          {session.path}
+          {sessionTools.path}
         </p>
       ) : null}
       {phase === "styling" ? <p className="phase">Reading the photo and choosing outfits…</p> : null}

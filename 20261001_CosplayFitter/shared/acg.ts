@@ -140,6 +140,85 @@ export const ACG_TOPICS: readonly AcgTopic[] = [
       },
     ],
   },
+  {
+    id: "chiikawa",
+    label: "Chiikawa",
+    malAnimeId: 50250,
+    characters: [
+      {
+        id: "chiikawa",
+        name: "Chiikawa",
+        aliases: ["Chiikawa"],
+        costume: "a tiny round white body, pink cheeks, small ears, and a simple pale look",
+      },
+      {
+        id: "hachiware",
+        name: "Hachiware",
+        aliases: ["Hachiware"],
+        costume: "a white body with a grey split across the face, grey cat-like ears, and a simple pale look",
+      },
+      {
+        id: "usagi",
+        name: "Usagi",
+        aliases: ["Usagi"],
+        costume: "a yellow body, long upright ears, a wide mouth, and a thin stick of grass held in one hand",
+      },
+      {
+        id: "momonga",
+        name: "Momonga",
+        aliases: ["Momonga"],
+        costume: "a pink flying-squirrel body, a pale membrane cape between the arms, and small ears",
+      },
+      {
+        id: "rakko",
+        name: "Rakko",
+        aliases: ["Rakko"],
+        costume: "a brown sea-otter body, a yellow work jacket, and a tool held ready for labor",
+      },
+      {
+        id: "kurimanju",
+        name: "Kurimanju",
+        aliases: ["Kuri-manjuu", "Kurimanju"],
+        costume: "a round brown chestnut-bun body, a cracked chestnut top, and small limbs",
+      },
+      {
+        id: "shisa",
+        name: "Shisa",
+        aliases: ["Shiisaa", "Shisa"],
+        costume: "a small Okinawan lion-dog body, a curly mane, and a blue-white coat",
+      },
+      {
+        id: "furuhonya",
+        name: "Furuhonya",
+        aliases: ["Furuhonya"],
+        costume: "a small bookseller look, a simple shop apron, and a stack of old books",
+      },
+      {
+        id: "kabutomushi",
+        name: "Kabutomushi",
+        aliases: ["Kabutomushi"],
+        costume: "a rhinoceros-beetle body, a horn on the head, and a dark brown shell",
+      },
+      {
+        id: "pochette_armor",
+        name: "Pochette armor",
+        aliases: ["Poshetto no Yoroi-san"],
+        costume: "a tiny suit of pale plate armor that fits in a small pouch, with a closed visor",
+      },
+      {
+        id: "ramen_armor",
+        name: "Ramen armor",
+        aliases: ["Ramen no Yoroi-san"],
+        costume: "a tiny suit of armor and a ramen bowl carried as the signature prop",
+      },
+      {
+        id: "pajama_leader",
+        name: "Pajama Parties leader",
+        aliases: ["Pyjama Parties Leader"],
+        costume: "bright pajamas, a party bow, and the look of someone leading a pajama party",
+      },
+    ],
+  },
 ];
 
 export function getTopic(id: string): AcgTopic | undefined {

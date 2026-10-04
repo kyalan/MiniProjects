@@ -16,7 +16,7 @@ import {
   type UsageMetadata,
 } from "../shared/types.ts";
 import { validateFitting } from "../shared/validate.ts";
-import { createAuth, credentialsFromEnv, type AuthSetting } from "./auth.ts";
+import { ADMIN_ID, createAuth, credentialsFromEnv, type AuthSetting } from "./auth.ts";
 import { countTokens, generateContent, GeminiRequestError, photoPart, type GeminiPart } from "./gemini.ts";
 import { parseOutfits } from "./outfits.ts";
 import { lookupPlace, unavailablePlace } from "./place.ts";
@@ -123,7 +123,13 @@ export async function createApp(options: AppOptions): Promise<Express> {
   app.use(express.json({ limit: "24mb" }));
   const authSetting = options.auth === undefined ? credentialsFromEnv() : options.auth;
   const auth = createAuth(authSetting === false ? null : authSetting);
-  if (authSetting !== false) app.use(auth.guard);
+  const authEnforced = authSetting !== false;
+  if (authEnforced) app.use(auth.guard);
+
+  function requesterIsAdmin(req: Request): boolean {
+    if (!authEnforced) return true;
+    return auth.userId(req) === ADMIN_ID;
+  }
   const reveal = options.openFolder ?? openFolder;
   const loadPortrait =
     options.loadPortrait ??
@@ -144,7 +150,12 @@ export async function createApp(options: AppOptions): Promise<Express> {
   };
 
   app.get("/api/session", (req, res) => {
-    res.json({ authenticated: auth.signedIn(req), configured: auth.credentials !== null });
+    const authenticated = auth.signedIn(req);
+    res.json({
+      authenticated,
+      configured: auth.credentials !== null,
+      admin: authenticated && auth.userId(req) === ADMIN_ID,
+    });
   });
 
   app.post("/api/login", (req, res) => {
@@ -389,7 +400,7 @@ export async function createApp(options: AppOptions): Promise<Express> {
         type: "error",
         message: errorMessage,
         sessionId,
-        sessionPath: dir,
+        ...(requesterIsAdmin(req) ? { sessionPath: dir } : {}),
       });
     } finally {
       await writeJson(
@@ -427,7 +438,7 @@ export async function createApp(options: AppOptions): Promise<Express> {
         send({
           type: "done",
           sessionId,
-          sessionPath: dir,
+          ...(requesterIsAdmin(req) ? { sessionPath: dir } : {}),
           actual,
           estimate,
         });
@@ -437,6 +448,10 @@ export async function createApp(options: AppOptions): Promise<Express> {
   });
 
   app.get("/api/sessions/:id/zip", async (req, res) => {
+    if (!requesterIsAdmin(req)) {
+      res.status(403).json({ error: "The session folder is only available to the admin." });
+      return;
+    }
     const dir = resolveSessionDir(options.sessionsDir, req.params.id);
     if (!dir || !(await fileExists(dir))) {
       res.status(404).json({ error: "That session backup was not found." });
@@ -446,6 +461,10 @@ export async function createApp(options: AppOptions): Promise<Express> {
   });
 
   app.post("/api/sessions/:id/reveal", async (req, res) => {
+    if (!requesterIsAdmin(req)) {
+      res.status(403).json({ error: "The session folder is only available to the admin." });
+      return;
+    }
     const dir = resolveSessionDir(options.sessionsDir, req.params.id);
     if (!dir || !(await fileExists(dir))) {
       res.status(404).json({ error: "That session backup was not found." });

@@ -216,17 +216,24 @@ describe("fitting API", () => {
     const response = await request(app)
       .post("/api/generate")
       .set("x-gemini-key", SECRET)
-      .send(fittingBody(1));
+      .send({ ...fittingBody(1), height: "160", weight: 52 });
     const events = response.text
       .trim()
       .split("\n")
-      .map((line) => JSON.parse(line) as { type: string; sessionId?: string; index?: number });
+      .map((line) => JSON.parse(line) as { type: string; sessionId?: string; sessionPath?: string; index?: number });
     expect(events.map((event) => event.type)).toEqual(["stylist", "preview", "done"]);
-    const sessionId = events.find((event) => event.type === "done")?.sessionId;
+    const done = events.find((event) => event.type === "done");
+    const sessionId = done?.sessionId;
     expect(sessionId).toBeTruthy();
     const folder = path.join(sessionsDir, sessionId!);
+    expect(done?.sessionPath).toBe(folder);
     const stylist = await readFile(path.join(folder, "prompts", "stylist.txt"), "utf8");
     expect(stylist).toContain("Monkey D. Luffy");
+    expect(stylist).toContain("Height: 160 cm");
+    expect(stylist).toContain("Weight: 52 kg");
+    const imagePrompt = await readFile(path.join(folder, "prompts", "image-01.txt"), "utf8");
+    expect(imagePrompt).toContain("Height: 160 cm");
+    expect(imagePrompt).toContain("Weight: 52 kg");
     expect(stylist).toContain("Monday 28 September 2026");
     expect(stylist).toContain("22°C");
     expect(stylist).toMatch(/live-action photograph/i);
@@ -271,6 +278,25 @@ describe("fitting API", () => {
     expect(reveal.status).toBe(200);
     expect(opened).toEqual([folder]);
     expect((await request(app).post("/api/sessions/not-a-session/reveal")).status).toBe(404);
+  });
+
+  it("omits the session path for an ID other than ky_admin", async () => {
+    const gemini = mockGemini();
+    const app = await testApp(sessionsDir, gemini, {
+      auth: { user: "guest", password: "secret" },
+    });
+    const agent = request.agent(app);
+    expect((await agent.post("/api/login").send({ id: "guest", password: "secret" })).status).toBe(200);
+    const response = await agent.post("/api/generate").set("x-gemini-key", SECRET).send(fittingBody(1));
+    const done = response.text
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { type: string; sessionId?: string; sessionPath?: string })
+      .find((event) => event.type === "done");
+    expect(done?.sessionId).toBeTruthy();
+    expect(done?.sessionPath).toBeUndefined();
+    expect((await agent.get(`/api/sessions/${done?.sessionId}/zip`)).status).toBe(403);
+    expect((await agent.post(`/api/sessions/${done?.sessionId}/reveal`)).status).toBe(403);
   });
 
   it("generates five previews with at most two image calls in flight", async () => {

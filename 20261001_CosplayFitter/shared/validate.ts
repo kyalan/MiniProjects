@@ -3,7 +3,6 @@ import { normalizeNote } from "./prompts.ts";
 import {
   ALLOWED_MIME_TYPES,
   MAX_IMAGE_BYTES,
-  MAX_MEASURE_LENGTH,
   MAX_PREVIEWS,
   MIN_PREVIEWS,
   type AllowedMimeType,
@@ -39,11 +38,29 @@ function isResolution(value: string): value is Resolution {
   return value === "1K" || value === "2K";
 }
 
-function normalizeMeasure(value: unknown, label: string): { ok: true; value: string } | { ok: false; error: string } {
+const MIN_HEIGHT_CM = 50;
+const MAX_HEIGHT_CM = 250;
+const MIN_WEIGHT_KG = 1;
+const MAX_WEIGHT_KG = 300;
+
+function normalizeBodyMeasure(
+  value: unknown,
+  label: string,
+  unit: "cm" | "kg",
+  min: number,
+  max: number,
+): { ok: true; value: string } | { ok: false; error: string } {
   if (value === undefined || value === null || value === "") return { ok: true, value: "" };
-  if (typeof value !== "string") return { ok: false, error: `${label} should be a short note, or left blank.` };
-  const text = value.trim().slice(0, MAX_MEASURE_LENGTH);
-  return { ok: true, value: text };
+  const text = (typeof value === "number" ? String(value) : typeof value === "string" ? value : "").trim();
+  const match = new RegExp(`^(\\d+)(?:\\s*${unit})?$`, "i").exec(text);
+  if (!match) {
+    return { ok: false, error: `${label} should be a whole number of ${unit}, or left blank.` };
+  }
+  const amount = Number(match[1]);
+  if (amount < min || amount > max) {
+    return { ok: false, error: `${label} should be a whole number from ${min} to ${max} ${unit}, or left blank.` };
+  }
+  return { ok: true, value: `${amount} ${unit}` };
 }
 
 function normalizeAge(value: unknown): { ok: true; age: string } | { ok: false; error: string } {
@@ -103,9 +120,9 @@ export function validateFitting(body: unknown): ValidationResult {
 
   const age = normalizeAge(record.age);
   if (!age.ok) return { ok: false, status: 400, error: age.error };
-  const height = normalizeMeasure(record.height, "Height");
+  const height = normalizeBodyMeasure(record.height, "Height", "cm", MIN_HEIGHT_CM, MAX_HEIGHT_CM);
   if (!height.ok) return { ok: false, status: 400, error: height.error };
-  const weight = normalizeMeasure(record.weight, "Weight");
+  const weight = normalizeBodyMeasure(record.weight, "Weight", "kg", MIN_WEIGHT_KG, MAX_WEIGHT_KG);
   if (!weight.ok) return { ok: false, status: 400, error: weight.error };
 
   const note = typeof record.note === "string" ? normalizeNote(record.note) : "";

@@ -13,13 +13,22 @@ import { downloadUrl, readNdjson } from "./lib/stream";
 type RefineState = "local" | "loading" | "refined" | "failed";
 type Phase = "idle" | "styling" | "rendering" | "done";
 
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 3);
+}
+
+function bodyMeasure(value: string, unit: "cm" | "kg"): string {
+  if (!/^\d+$/.test(value)) return "";
+  return `${Number(value)} ${unit}`;
+}
+
 function isOutfit(value: unknown): value is Outfit {
   if (!value || typeof value !== "object") return false;
   const outfit = value as Outfit;
   return typeof outfit.name === "string" && typeof outfit.why === "string" && Array.isArray(outfit.garments);
 }
 
-export function App({ onSignOut }: { onSignOut?: () => void }) {
+export function App({ admin = false, onSignOut }: { admin?: boolean; onSignOut?: () => void }) {
   const [topicId, setTopicId] = useState("");
   const [characterId, setCharacterId] = useState("");
   const [portraitReady, setPortraitReady] = useState(false);
@@ -84,6 +93,8 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
   const climate = place ? climateFromPlace(place) : null;
   const regionBlocked = place?.blocked === true;
   const referenceCount = portraitReady ? 1 : 0;
+  const heightText = bodyMeasure(height, "cm");
+  const weightText = bodyMeasure(weight, "kg");
 
   const localEstimate = useMemo(() => {
     if (!topicId || !characterId) return null;
@@ -94,14 +105,14 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
       note,
       resolution,
       age,
-      height,
-      weight,
+      height: heightText,
+      weight: weightText,
       referenceCount,
       climate,
     });
-  }, [age, characterId, climate, count, height, note, referenceCount, resolution, topicId, weight]);
+  }, [age, characterId, climate, count, heightText, note, referenceCount, resolution, topicId, weightText]);
 
-  const refineKey = `${topicId}|${characterId}|${count}|${note}|${resolution}|${photoVersion}|${age}|${height}|${weight}|${referenceCount}|${climate?.dateLabel ?? ""}|${climate?.temperatureC ?? ""}|${climate?.placeLabel ?? ""}`;
+  const refineKey = `${topicId}|${characterId}|${count}|${note}|${resolution}|${photoVersion}|${age}|${heightText}|${weightText}|${referenceCount}|${climate?.dateLabel ?? ""}|${climate?.temperatureC ?? ""}|${climate?.placeLabel ?? ""}`;
   const estimate = refined?.key === refineKey ? refined.estimate : localEstimate;
   const shownRefine: RefineState = refineStatus.key === refineKey ? refineStatus.state : "local";
 
@@ -127,8 +138,8 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
           imageBase64: photo.base64,
           mimeType: photo.mimeType,
           age,
-          height,
-          weight,
+          height: heightText,
+          weight: weightText,
         }),
       })
         .then(async (response) => {
@@ -148,7 +159,7 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [age, apiKey, characterId, count, hasServerKey, height, note, photo, refineKey, regionBlocked, resolution, topicId, weight]);
+  }, [age, apiKey, characterId, count, hasServerKey, heightText, note, photo, refineKey, regionBlocked, resolution, topicId, weightText]);
 
   async function onFile(file: File) {
     setPreparing(true);
@@ -200,8 +211,8 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
           imageBase64: photo.base64,
           mimeType: photo.mimeType,
           age,
-          height,
-          weight,
+          height: heightText,
+          weight: weightText,
         }),
       });
       if (!response.ok) {
@@ -334,12 +345,24 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
               <input data-testid="age" inputMode="numeric" placeholder="Years" value={age} onChange={(event) => setAge(event.target.value)} />
             </label>
             <label>
-              Height
-              <input data-testid="height" placeholder="170 cm" value={height} maxLength={40} onChange={(event) => setHeight(event.target.value)} />
+              Height (cm)
+              <input
+                data-testid="height"
+                inputMode="numeric"
+                placeholder="170"
+                value={height}
+                onChange={(event) => setHeight(digitsOnly(event.target.value))}
+              />
             </label>
             <label>
-              Weight
-              <input data-testid="weight" placeholder="65 kg" value={weight} maxLength={40} onChange={(event) => setWeight(event.target.value)} />
+              Weight (kg)
+              <input
+                data-testid="weight"
+                inputMode="numeric"
+                placeholder="65"
+                value={weight}
+                onChange={(event) => setWeight(digitsOnly(event.target.value))}
+              />
             </label>
           </div>
         </div>
@@ -452,6 +475,7 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
         cards={cards}
         phase={phase}
         characterName={character?.name ?? ""}
+        admin={admin}
         session={session}
         onDownloadZip={() => void downloadZip()}
         onReveal={() => void revealFolder()}

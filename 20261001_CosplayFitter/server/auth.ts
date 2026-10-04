@@ -2,7 +2,13 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 
 export const SESSION_COOKIE = "cosplay_session";
+export const ADMIN_ID = "ky_admin";
 const SESSION_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface SessionRecord {
+  createdAt: number;
+  userId: string;
+}
 
 export interface LoginCredentials {
   user: string;
@@ -47,21 +53,26 @@ function sessionCookie(token: string, maxAge: number): string {
 }
 
 export function createAuth(credentials: AuthSetting) {
-  const sessions = new Map<string, number>();
+  const sessions = new Map<string, SessionRecord>();
 
-  function validToken(token: string): boolean {
-    if (!token) return false;
-    const createdAt = sessions.get(token);
-    if (createdAt === undefined) return false;
-    if (Date.now() - createdAt > SESSION_MS) {
+  function sessionOf(req: Request): SessionRecord | null {
+    const token = readCookie(req.header("cookie"), SESSION_COOKIE);
+    if (!token) return null;
+    const record = sessions.get(token);
+    if (!record) return null;
+    if (Date.now() - record.createdAt > SESSION_MS) {
       sessions.delete(token);
-      return false;
+      return null;
     }
-    return true;
+    return record;
   }
 
   function signedIn(req: Request): boolean {
-    return validToken(readCookie(req.header("cookie"), SESSION_COOKIE));
+    return sessionOf(req) !== null;
+  }
+
+  function userId(req: Request): string {
+    return sessionOf(req)?.userId ?? "";
   }
 
   function login(id: string, password: string): { ok: true; cookie: string } | { ok: false; status: number; error: string } {
@@ -76,7 +87,7 @@ export function createAuth(credentials: AuthSetting) {
       return { ok: false, status: 401, error: "That ID or password is wrong." };
     }
     const token = randomBytes(32).toString("base64url");
-    sessions.set(token, Date.now());
+    sessions.set(token, { createdAt: Date.now(), userId: credentials.user });
     return { ok: true, cookie: sessionCookie(token, Math.floor(SESSION_MS / 1000)) };
   }
 
@@ -102,5 +113,5 @@ export function createAuth(credentials: AuthSetting) {
     next();
   }
 
-  return { credentials, signedIn, login, logout, guard };
+  return { credentials, signedIn, userId, login, logout, guard };
 }

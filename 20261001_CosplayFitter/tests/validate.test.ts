@@ -63,14 +63,40 @@ describe("validateFitting", () => {
     const result = validateFitting({
       ...valid,
       age: 34,
-      height: "170 cm",
-      weight: "65 kg",
+      height: 170,
+      weight: "65",
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.age).toBe("34");
       expect(result.value.height).toBe("170 cm");
       expect(result.value.weight).toBe("65 kg");
+    }
+  });
+
+  it("keeps a unit already written on height or weight", () => {
+    const result = validateFitting({
+      ...valid,
+      height: "170 cm",
+      weight: "65 kg",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.height).toBe("170 cm");
+      expect(result.value.weight).toBe("65 kg");
+    }
+  });
+
+  it("rejects a decimal or an out-of-range height or weight", () => {
+    expect(validateFitting({ ...valid, height: "170.5" }).ok).toBe(false);
+    expect(validateFitting({ ...valid, height: "49" }).ok).toBe(false);
+    expect(validateFitting({ ...valid, weight: "0" }).ok).toBe(false);
+    expect(validateFitting({ ...valid, weight: "301 kg" }).ok).toBe(false);
+    const blank = validateFitting({ ...valid, height: "", weight: "" });
+    expect(blank.ok).toBe(true);
+    if (blank.ok) {
+      expect(blank.value.height).toBe("");
+      expect(blank.value.weight).toBe("");
     }
   });
 

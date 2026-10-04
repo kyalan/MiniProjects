@@ -91,4 +91,21 @@ describe("prompt builder", () => {
     expect(directed).toMatch(/imageDirection must name the fabric and layers/i);
     expect(portrait).toMatch(/clothes must suit that weather/i);
   });
+
+  it("names a Chiikawa character and the costume used for that portrait", () => {
+    const topic = getTopic("chiikawa");
+    const character = getCharacter("chiikawa", "hachiware");
+    expect(topic?.malAnimeId).toBe(50250);
+    expect(character?.aliases).toContain("Hachiware");
+    if (!topic || !character) throw new Error("missing character");
+    const directed = buildStylistPrompt({
+      character,
+      topicLabel: topic.label,
+      count: 1,
+      note: "",
+    });
+    expect(directed).toContain("Chiikawa");
+    expect(directed).toContain("Hachiware");
+    expect(directed).toContain(character.costume);
+  });
 });

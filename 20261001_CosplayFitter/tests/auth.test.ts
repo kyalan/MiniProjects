@@ -1,10 +1,11 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import request from "supertest";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApp } from "../server/app.ts";
-import { sameSecret } from "../server/auth.ts";
+import { ADMIN_ID, sameSecret } from "../server/auth.ts";
+import { createSessionId } from "../server/sessions.ts";
 
 const OPEN_PLACE = {
   ok: true,
@@ -46,7 +47,7 @@ describe("login", () => {
     const signedIn = await agent.post("/api/login").send({ id: "kyala", password: "correct horse" });
     expect(signedIn.status).toBe(200);
     const session = await agent.get("/api/session");
-    expect(session.body).toEqual({ authenticated: true, configured: true });
+    expect(session.body).toEqual({ authenticated: true, configured: true, admin: false });
     const config = await agent.get("/api/config");
     expect(config.status).toBe(200);
 
@@ -64,7 +65,7 @@ describe("login", () => {
     try {
       const fresh = await createApp({ sessionsDir, lookupPlace: async () => OPEN_PLACE });
       const session = await request(fresh).get("/api/session");
-      expect(session.body).toEqual({ authenticated: false, configured: false });
+      expect(session.body).toEqual({ authenticated: false, configured: false, admin: false });
       const login = await request(fresh).post("/api/login").send({ id: "anyone", password: "anything" });
       expect(login.status).toBe(503);
       expect(login.body.error).toMatch(/APP_USER/);
@@ -74,5 +75,47 @@ describe("login", () => {
       if (savedPassword === undefined) delete process.env.APP_PASSWORD;
       else process.env.APP_PASSWORD = savedPassword;
     }
+  });
+
+  it("treats only ky_admin as the admin", async () => {
+    sessionsDir = await mkdtemp(path.join(tmpdir(), "auth-"));
+    const sessionId = createSessionId();
+    const folder = path.join(sessionsDir, sessionId);
+    await mkdir(folder, { recursive: true });
+    await writeFile(path.join(folder, "note.txt"), "kept");
+    const opened: string[] = [];
+
+    const guest = await createApp({
+      sessionsDir,
+      lookupPlace: async () => OPEN_PLACE,
+      auth: { user: "kyala", password: "correct horse" },
+      openFolder: (dir) => opened.push(dir),
+    });
+    const guestAgent = request.agent(guest);
+    expect((await guestAgent.post("/api/login").send({ id: "kyala", password: "correct horse" })).status).toBe(200);
+    expect((await guestAgent.get("/api/session")).body.admin).toBe(false);
+    expect((await guestAgent.get(`/api/sessions/${sessionId}/zip`)).status).toBe(403);
+    expect((await guestAgent.post(`/api/sessions/${sessionId}/reveal`)).status).toBe(403);
+    expect(opened).toEqual([]);
+
+    const admin = await createApp({
+      sessionsDir,
+      lookupPlace: async () => OPEN_PLACE,
+      auth: { user: ADMIN_ID, password: "correct horse" },
+      openFolder: (dir) => opened.push(dir),
+    });
+    const adminAgent = request.agent(admin);
+    expect((await adminAgent.post("/api/login").send({ id: ADMIN_ID, password: "correct horse" })).status).toBe(200);
+    expect((await adminAgent.get("/api/session")).body).toEqual({
+      authenticated: true,
+      configured: true,
+      admin: true,
+    });
+    const zip = await adminAgent.get(`/api/sessions/${sessionId}/zip`);
+    expect(zip.status).toBe(200);
+    expect(zip.headers["content-type"]).toMatch(/zip/);
+    const reveal = await adminAgent.post(`/api/sessions/${sessionId}/reveal`);
+    expect(reveal.status).toBe(200);
+    expect(opened).toEqual([folder]);
   });
 });
