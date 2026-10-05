@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { getCharacter, getTopic, type AcgTopic } from "../shared/acg.ts";
+import { getCharacter, getTopic, type AcgCharacter, type AcgTopic } from "../shared/acg.ts";
 import type { AllowedMimeType } from "../shared/types.ts";
 
 export interface CachedPortrait {
@@ -41,6 +41,64 @@ function extensionFor(mimeType: AllowedMimeType): (typeof EXTENSIONS)[number] {
   if (mimeType === "image/png") return "png";
   if (mimeType === "image/webp") return "webp";
   return "jpg";
+}
+
+const PREVIEW_WIDTH = "800";
+
+function httpsUrl(value: unknown): string {
+  return typeof value === "string" && /^https:\/\//.test(value) ? value : "";
+}
+
+function wikiQuery(api: string, params: Record<string, string>): string {
+  const url = new URL(api);
+  url.searchParams.set("action", "query");
+  url.searchParams.set("format", "json");
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  return url.toString();
+}
+
+function firstPage(payload: unknown): Record<string, unknown> | null {
+  if (!payload || typeof payload !== "object") return null;
+  const pages = (payload as { query?: { pages?: unknown } }).query?.pages;
+  if (!pages || typeof pages !== "object") return null;
+  for (const page of Object.values(pages as Record<string, unknown>)) {
+    if (!page || typeof page !== "object" || "missing" in page) continue;
+    return page as Record<string, unknown>;
+  }
+  return null;
+}
+
+async function wikiImageUrl(fetchImpl: typeof fetch, topic: AcgTopic, character: AcgCharacter): Promise<string | null> {
+  if (!topic.wikiApi) return null;
+  const endpoint = character.previewFile
+    ? wikiQuery(topic.wikiApi, {
+        titles: `File:${character.previewFile}`,
+        prop: "imageinfo",
+        iiprop: "url",
+        iiurlwidth: PREVIEW_WIDTH,
+      })
+    : character.previewPage
+      ? wikiQuery(topic.wikiApi, {
+          titles: character.previewPage,
+          prop: "pageimages",
+          piprop: "thumbnail",
+          pithumbsize: PREVIEW_WIDTH,
+        })
+      : "";
+  if (!endpoint) return null;
+  const response = await fetchImpl(endpoint, { signal: AbortSignal.timeout(20_000) });
+  if (!response.ok) return null;
+  const page = firstPage(await response.json());
+  if (!page) return null;
+  if (character.previewFile) {
+    const info = Array.isArray(page.imageinfo) ? page.imageinfo[0] : null;
+    if (!info || typeof info !== "object") return null;
+    const record = info as { thumburl?: unknown; url?: unknown };
+    return httpsUrl(record.thumburl) || httpsUrl(record.url) || null;
+  }
+  const thumbnail = page.thumbnail;
+  if (!thumbnail || typeof thumbnail !== "object") return null;
+  return httpsUrl((thumbnail as { source?: unknown }).source) || null;
 }
 
 function isRosterEntry(value: unknown): value is RosterEntry {
@@ -105,7 +163,22 @@ export function createPortraitLoader(options: { cacheDir: string; fetchImpl?: ty
     await writeFile(file, String(Date.now()));
   }
 
+  async function download(topicId: string, characterId: string, imageUrl: string): Promise<CachedPortrait | null> {
+    return withSlot(async () => {
+      const response = await fetchImpl(imageUrl, { signal: AbortSignal.timeout(20_000) });
+      if (!response.ok) return null;
+      const bytes = Buffer.from(await response.arrayBuffer());
+      const mimeType = sniff(bytes);
+      if (!mimeType || bytes.length > 7 * 1024 * 1024) return null;
+      const file = path.join(options.cacheDir, topicId, `${characterId}.${extensionFor(mimeType)}`);
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, bytes);
+      return { imageBase64: bytes.toString("base64"), mimeType };
+    });
+  }
+
   async function roster(topic: AcgTopic): Promise<RosterEntry[] | null> {
+    if (!topic.malAnimeId) return null;
     const file = path.join(options.cacheDir, topic.id, "roster.json");
     try {
       const parsed = JSON.parse(await readFile(file, "utf8")) as unknown;
@@ -154,6 +227,21 @@ export function createPortraitLoader(options: { cacheDir: string; fetchImpl?: ty
     const cached = await readCached(topicId, characterId);
     if (cached) return cached;
     if (await recentMiss(topicId, characterId)) return null;
+    if (topic.wikiApi && (character.previewFile || character.previewPage)) {
+      try {
+        const imageUrl = await wikiImageUrl(fetchImpl, topic, character);
+        if (!imageUrl) {
+          await writeMiss(topicId, characterId);
+          return null;
+        }
+        const downloaded = await download(topicId, characterId, imageUrl);
+        if (!downloaded) await writeMiss(topicId, characterId);
+        return downloaded;
+      } catch {
+        await writeMiss(topicId, characterId);
+        return null;
+      }
+    }
     const entries = await roster(topic);
     const wanted = new Set([character.name, ...character.aliases].map(normalizeName));
     const match = entries?.find((entry) => wanted.has(normalizeName(entry.name)));
@@ -162,17 +250,7 @@ export function createPortraitLoader(options: { cacheDir: string; fetchImpl?: ty
       return null;
     }
     try {
-      const downloaded = await withSlot(async () => {
-        const response = await fetchImpl(match.imageUrl, { signal: AbortSignal.timeout(20_000) });
-        if (!response.ok) return null;
-        const bytes = Buffer.from(await response.arrayBuffer());
-        const mimeType = sniff(bytes);
-        if (!mimeType || bytes.length > 7 * 1024 * 1024) return null;
-        const file = path.join(options.cacheDir, topicId, `${characterId}.${extensionFor(mimeType)}`);
-        await mkdir(path.dirname(file), { recursive: true });
-        await writeFile(file, bytes);
-        return { imageBase64: bytes.toString("base64"), mimeType };
-      });
+      const downloaded = await download(topicId, characterId, match.imageUrl);
       if (!downloaded) await writeMiss(topicId, characterId);
       return downloaded;
     } catch {

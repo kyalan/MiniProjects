@@ -159,7 +159,7 @@ export function stylistPromptFor(input: {
   }
   return buildStylistPrompt({
     character,
-    topicLabel: topic.label,
+    topicLabel: topic.series ?? topic.label,
     count: input.count,
     note: input.note,
     direction: {

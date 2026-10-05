@@ -195,6 +195,7 @@ textarea, .field input[type="password"] {
 }
 
 .stepper, .pills { display: flex; align-items: center; gap: 8px; }
+.pills { flex-wrap: wrap; }
 
 .stepper button, .pill, .wall-actions button, .generate, .text-button {
   border: 0;

@@ -3,12 +3,16 @@ export interface AcgCharacter {
   name: string;
   aliases: readonly string[];
   costume: string;
+  previewPage?: string;
+  previewFile?: string;
 }
 
 export interface AcgTopic {
   id: string;
   label: string;
-  malAnimeId: number;
+  series?: string;
+  malAnimeId?: number;
+  wikiApi?: string;
   characters: readonly AcgCharacter[];
 }
 
@@ -216,6 +220,169 @@ export const ACG_TOPICS: readonly AcgTopic[] = [
         name: "Pajama Parties leader",
         aliases: ["Pyjama Parties Leader"],
         costume: "bright pajamas, a party bow, and the look of someone leading a pajama party",
+      },
+    ],
+  },
+  {
+    id: "jungle",
+    label: "Jungle",
+    series: "Jumanji: Welcome to the Jungle (2017)",
+    wikiApi: "https://jumanji.fandom.com/api.php",
+    characters: [
+      {
+        id: "bravestone",
+        name: "Dr. Smolder Bravestone",
+        aliases: ["Smolder Bravestone", "Dr. Xander Bravestone"],
+        costume: "a khaki adventure shirt, a brown leather vest, khaki trousers, boots, and a belt with a holster",
+        previewPage: "Smolder Bravestone",
+      },
+      {
+        id: "ruby",
+        name: "Ruby Roundhouse",
+        aliases: ["Ruby Roundhouse"],
+        costume: "a short olive top, khaki shorts, combat boots, and a high ponytail",
+        previewPage: "Ruby Roundhouse",
+      },
+      {
+        id: "finbar",
+        name: 'Franklin "Mouse" Finbar',
+        aliases: ["Franklin Finbar", "Mouse Finbar", "Franklin \"Mouse\" Finbar"],
+        costume: "a khaki zoologist shirt, a utility vest, shorts, glasses, and a backpack",
+        previewPage: 'Franklin "Mouse" Finbar',
+      },
+      {
+        id: "oberon",
+        name: "Professor Shelly Oberon",
+        aliases: ["Shelly Oberon", "Sheldon Oberon", "Professor Sheldon Oberon"],
+        costume: "a cream shirt, khaki shorts, glasses, boots, and a map case",
+        previewPage: "Shelly Oberon",
+      },
+      {
+        id: "seaplane",
+        name: 'Jefferson "Seaplane" McDonough',
+        aliases: ["Seaplane McDonough", "Jefferson McDonough"],
+        costume: "a brown leather flight jacket, an aviator scarf, goggles, and a pilot cap",
+        previewPage: "Seaplane McDonough",
+      },
+      {
+        id: "nigel",
+        name: "Nigel Billingsley",
+        aliases: ["Nigel Billingsley"],
+        costume: "a khaki safari suit and a pith helmet",
+        previewPage: "Nigel Billingsley",
+      },
+      {
+        id: "van_pelt",
+        name: "Russell Van Pelt",
+        aliases: ["Russell Van Pelt", "Van Pelt"],
+        costume: "a dark hunter coat, a wide hat, and a leather belt",
+        previewPage: "Russell Van Pelt",
+      },
+    ],
+  },
+  {
+    id: "desert",
+    label: "Desert",
+    series: "Dune (2021)",
+    wikiApi: "https://dune.fandom.com/api.php",
+    characters: [
+      {
+        id: "paul",
+        name: "Paul Atreides",
+        aliases: ["Paul Atreides", "Muad'Dib"],
+        costume: "a dark Atreides jacket with a high collar, or a desert stillsuit under a sand-colored cloak",
+        previewFile: "Dune Character Poster - Paul.jpeg",
+      },
+      {
+        id: "jessica",
+        name: "Lady Jessica",
+        aliases: ["Lady Jessica", "Jessica Atreides"],
+        costume: "a long dark gown with a sheer veil, or a stillsuit under a dark cloak",
+        previewFile: "Dune Character Poster - Lady Jessica.jpeg",
+      },
+      {
+        id: "chani",
+        name: "Chani",
+        aliases: ["Chani", "Chani Kynes"],
+        costume: "a Fremen stillsuit, a sand-colored wrap, and blue eye lenses",
+        previewFile: "Dune Character Poster - Chani.jpeg",
+      },
+      {
+        id: "leto",
+        name: "Duke Leto Atreides",
+        aliases: ["Duke Leto Atreides", "Leto Atreides"],
+        costume: "a dark Atreides military uniform and a long cape",
+        previewFile: "Dune Character Poster - Duke Leto.jpeg",
+      },
+      {
+        id: "duncan",
+        name: "Duncan Idaho",
+        aliases: ["Duncan Idaho"],
+        costume: "Atreides armor, a dark cloak, and long hair",
+        previewFile: "Dune Character Poster - Duncan Idaho.jpeg",
+      },
+      {
+        id: "gurney",
+        name: "Gurney Halleck",
+        aliases: ["Gurney Halleck"],
+        costume: "Atreides battle armor and a dark cloak",
+        previewFile: "Dune Character Poster - Gurney.jpeg",
+      },
+      {
+        id: "stilgar",
+        name: "Stilgar",
+        aliases: ["Stilgar"],
+        costume: "a Fremen stillsuit, a desert robe, and blue eye lenses",
+        previewFile: "Dune Character Poster - Stilgar.jpeg",
+      },
+      {
+        id: "baron",
+        name: "Baron Vladimir Harkonnen",
+        aliases: ["Vladimir Harkonnen", "Baron Harkonnen"],
+        costume: "heavy black robes",
+        previewFile: "Dune Character Poster - Baron Harkonnen.jpeg",
+      },
+      {
+        id: "rabban",
+        name: "Glossu Rabban",
+        aliases: ["Glossu Rabban", "Beast Rabban"],
+        costume: "black Harkonnen armor",
+        previewFile: "Dune Character Poster - Beast Rabban.webp",
+      },
+      {
+        id: "kynes",
+        name: "Dr. Liet Kynes",
+        aliases: ["Liet Kynes", "Liet-Kynes", "Dr. Liet-Kynes"],
+        costume: "a stillsuit and a desert cloak",
+        previewFile: "Dune Character Poster - Liet Kynes.webp",
+      },
+      {
+        id: "mohiam",
+        name: "Reverend Mother Mohiam",
+        aliases: ["Gaius Helen Mohiam", "Reverend Mother Gaius Helen Mohiam"],
+        costume: "a black robe and a full veil",
+        previewFile: "Dune Character Poster - Reverend Mother Mohiam.webp",
+      },
+      {
+        id: "yueh",
+        name: "Dr. Wellington Yueh",
+        aliases: ["Wellington Yueh", "Dr. Yueh"],
+        costume: "a dark Suk doctor coat with a diamond mark on the forehead",
+        previewFile: "Dune Character Poster - Dr Yueh.webp",
+      },
+      {
+        id: "thufir",
+        name: "Thufir Hawat",
+        aliases: ["Thufir Hawat"],
+        costume: "dark Mentat robes",
+        previewFile: "Dune Character Poster - Thufir Hawat.webp",
+      },
+      {
+        id: "piter",
+        name: "Piter De Vries",
+        aliases: ["Piter De Vries"],
+        costume: "dark Harkonnen Mentat robes",
+        previewFile: "Dune Character Poster - Piter De Vries.webp",
       },
     ],
   },

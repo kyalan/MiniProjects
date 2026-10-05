@@ -179,7 +179,7 @@ export function App({ admin = false, onSignOut }: { admin?: boolean; onSignOut?:
   const blockReason = regionBlocked
     ? regionBlockMessage(place?.regionLabel ?? "")
     : !topicId
-    ? "Choose a topic."
+    ? "Choose a theme."
     : !characterId
       ? "Choose a character."
       : !photo

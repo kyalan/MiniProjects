@@ -60,4 +60,66 @@ describe("portrait cache", () => {
     expect(await load("one_piece", "nobody")).toBeNull();
     expect(calls).toBe(0);
   });
+
+  it("downloads a pinned film poster once and does not call Jikan", async () => {
+    cacheDir = await mkdtemp(path.join(tmpdir(), "acg-"));
+    const seen: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input);
+      seen.push(url);
+      if (url.includes("api.php")) {
+        return Response.json({
+          query: {
+            pages: {
+              "10706": {
+                imageinfo: [{ thumburl: "https://cdn.example/paul.jpg" }],
+              },
+            },
+          },
+        });
+      }
+      return new Response(TINY_PNG, { headers: { "content-type": "image/png" } });
+    };
+    const load = createPortraitLoader({ cacheDir, fetchImpl });
+    const first = await load("desert", "paul");
+    const second = await load("desert", "paul");
+    expect(first?.mimeType).toBe("image/png");
+    expect(second?.imageBase64).toBe(first?.imageBase64);
+    expect(seen.some((url) => url.includes("jikan.moe"))).toBe(false);
+    expect(seen.filter((url) => url.includes("paul.jpg"))).toHaveLength(1);
+    const wiki = seen.find((url) => url.includes("api.php")) ?? "";
+    expect(wiki).toContain("Dune+Character+Poster+-+Paul.jpeg");
+    expect(wiki).toContain("iiurlwidth=800");
+    const saved = await readFile(path.join(cacheDir, "desert", "paul.png"));
+    expect(saved.equals(TINY_PNG)).toBe(true);
+  });
+
+  it("downloads a wiki page image for a Jungle character", async () => {
+    cacheDir = await mkdtemp(path.join(tmpdir(), "acg-"));
+    const seen: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input);
+      seen.push(url);
+      if (url.includes("api.php")) {
+        return Response.json({
+          query: {
+            pages: {
+              "2453": {
+                title: "Ruby Roundhouse",
+                thumbnail: { source: "https://cdn.example/ruby.png" },
+              },
+            },
+          },
+        });
+      }
+      return new Response(TINY_PNG, { headers: { "content-type": "image/png" } });
+    };
+    const load = createPortraitLoader({ cacheDir, fetchImpl });
+    const portrait = await load("jungle", "ruby");
+    expect(portrait?.mimeType).toBe("image/png");
+    const wiki = seen.find((url) => url.includes("api.php")) ?? "";
+    expect(wiki).toContain("Ruby+Roundhouse");
+    expect(wiki).toContain("pithumbsize=800");
+    expect(seen.some((url) => url.includes("jikan.moe"))).toBe(false);
+  });
 });

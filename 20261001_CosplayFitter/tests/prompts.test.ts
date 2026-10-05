@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCharacter, getTopic } from "../shared/acg.ts";
-import { buildImagePrompt, buildStylistPrompt } from "../shared/prompts.ts";
+import { buildImagePrompt, buildStylistPrompt, stylistPromptFor } from "../shared/prompts.ts";
 import type { Outfit } from "../shared/types.ts";
 
 const outfit: Outfit = {
@@ -106,6 +106,39 @@ describe("prompt builder", () => {
     });
     expect(directed).toContain("Chiikawa");
     expect(directed).toContain("Hachiware");
+    expect(directed).toContain(character.costume);
+  });
+
+  it("names the 2021 film for a Desert character", () => {
+    const topic = getTopic("desert");
+    const character = getCharacter("desert", "paul");
+    expect(topic?.label).toBe("Desert");
+    expect(topic?.series).toBe("Dune (2021)");
+    expect(topic?.malAnimeId).toBeUndefined();
+    expect(character?.previewFile).toBe("Dune Character Poster - Paul.jpeg");
+    if (!character) throw new Error("missing character");
+    const directed = stylistPromptFor({
+      topicId: "desert",
+      characterId: "paul",
+      count: 1,
+      note: "",
+    });
+    expect(directed).toContain("Dune (2021)");
+    expect(directed).toContain("Paul Atreides");
+    expect(directed).toContain(character.costume);
+  });
+
+  it("names the 2017 film for a Jungle character", () => {
+    const character = getCharacter("jungle", "ruby");
+    if (!character) throw new Error("missing character");
+    const directed = stylistPromptFor({
+      topicId: "jungle",
+      characterId: "ruby",
+      count: 1,
+      note: "",
+    });
+    expect(directed).toContain("Jumanji: Welcome to the Jungle (2017)");
+    expect(directed).toContain("Ruby Roundhouse");
     expect(directed).toContain(character.costume);
   });
 });

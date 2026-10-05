@@ -61,8 +61,8 @@ export function CosplayPicker({ topicId, characterId, onTopic, onCharacter, onPo
 
   return (
     <div className="field">
-      <span className="field-label">ACG topic</span>
-      <div className="pills" role="radiogroup" aria-label="ACG topic">
+      <span className="field-label">Theme</span>
+      <div className="pills" role="radiogroup" aria-label="Theme">
         {ACG_TOPICS.map((item) => {
           const chosen = topicId === item.id;
           return (
@@ -134,7 +134,7 @@ export function CosplayPicker({ topicId, characterId, onTopic, onCharacter, onPo
           ) : null}
         </div>
       ) : (
-        <p className="hint">Choose a topic to see characters.</p>
+        <p className="hint">Choose a theme to see characters.</p>
       )}
     </div>
   );

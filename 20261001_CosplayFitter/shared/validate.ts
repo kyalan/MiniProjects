@@ -99,7 +99,7 @@ export function validateFitting(body: unknown): ValidationResult {
   const topicId = typeof record.topic === "string" ? record.topic : "";
   const characterId = typeof record.character === "string" ? record.character : "";
   if (!getTopic(topicId)) {
-    return { ok: false, status: 400, error: "Choose a topic." };
+    return { ok: false, status: 400, error: "Choose a theme." };
   }
   if (!getCharacter(topicId, characterId)) {
     return { ok: false, status: 400, error: "Choose a character." };
