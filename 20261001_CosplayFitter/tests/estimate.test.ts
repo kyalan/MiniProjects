@@ -107,6 +107,35 @@ describe("estimateFitting", () => {
     expect(estimate.inputTokens).toBe(2000 + 1800 * 2);
   });
 
+  it("uses Gemini's image token count when the photo is not the published 1,120", () => {
+    const estimate = estimateFitting({
+      topicId: "one_piece",
+      characterId: "luffy",
+      count: 2,
+      note: "",
+      resolution: "1K",
+      counted: {
+        stylistInputTokens: 263,
+        imageInputTokensEach: 263,
+        stylistTextTokens: 5,
+        stylistImageTokens: 258,
+        previewTextTokens: 5,
+        previewImageTokens: 258,
+      },
+    });
+    expect(estimate.lines.find((line) => line.label === "Stylist · input image")).toMatchObject({
+      tokens: 258,
+      note: "counted",
+    });
+    expect(estimate.lines.find((line) => line.label === "Stylist · input text")).toMatchObject({
+      tokens: 5,
+      note: "counted",
+    });
+    expect(estimate.lines.find((line) => line.label === "Previews · input image × 2")?.tokens).toBe(258 * 2);
+    expect(estimate.lines.find((line) => line.label === "Previews · output image × 2")?.tokens).toBe(1120 * 2);
+    expect(estimate.inputTokens).toBe(263 + 263 * 2);
+  });
+
   it("counts the costume portrait on the stylist call and on every preview", () => {
     const base = { topicId: "one_piece", characterId: "zoro", count: 2, note: "", resolution: "1K" as const };
     const plain = estimateFitting(base);

@@ -167,11 +167,32 @@ export async function generateContent(options: GenerateOptions): Promise<GeminiR
   return readGeminiResult(payload);
 }
 
+export interface TokenCount {
+  total: number;
+  textTokens?: number;
+  imageTokens?: number;
+}
+
+function modalityTokens(details: unknown, modality: string): number | undefined {
+  if (!Array.isArray(details)) return undefined;
+  let sum = 0;
+  let found = false;
+  for (const item of details) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as { modality?: unknown; tokenCount?: unknown };
+    const count = Number(record.tokenCount);
+    if (record.modality !== modality || !Number.isFinite(count)) continue;
+    sum += count;
+    found = true;
+  }
+  return found ? sum : undefined;
+}
+
 export async function countTokens(options: {
   apiKey: string;
   parts: GeminiPart[];
   fetchImpl?: typeof fetch;
-}): Promise<number> {
+}): Promise<TokenCount> {
   const payload = await postGemini(
     "countTokens",
     options.apiKey,
@@ -179,12 +200,16 @@ export async function countTokens(options: {
     30_000,
     options.fetchImpl ?? fetch,
   );
-  const total = (payload as { totalTokens?: unknown }).totalTokens;
-  const count = Number(total);
-  if (!Number.isFinite(count)) {
+  const record = payload as { totalTokens?: unknown; promptTokensDetails?: unknown };
+  const total = Number(record.totalTokens);
+  if (!Number.isFinite(total)) {
     throw new GeminiRequestError(502, "Gemini did not return a token count.");
   }
-  return count;
+  return {
+    total,
+    textTokens: modalityTokens(record.promptTokensDetails, "TEXT"),
+    imageTokens: modalityTokens(record.promptTokensDetails, "IMAGE"),
+  };
 }
 
 export function photoPart(mimeType: string, data: string): GeminiPart {

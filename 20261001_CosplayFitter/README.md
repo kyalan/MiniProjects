@@ -42,25 +42,29 @@ The page looks up this machine’s public IP and compares that country with Goog
 
 For this job — keep one face and follow a character costume — the image model offered in Hong Kong is Qwen-Image on Alibaba Cloud Model Studio, Hong Kong region (`qwen-image-3.0`, or the current Qwen image-edit model). That endpoint accepts reference images for editing. This project does not call it. Seedream and Flux can also generate clothes, and they are also not wired in here.
 
-## Push it to GitHub
+## Push a local change to GitHub
 
-This folder is the `20261001_CosplayFitter` project inside [kyalan/MiniProjects](https://github.com/kyalan/MiniProjects). Push from the MiniProjects checkout, not from a new repository created only for this folder. Do not commit `.env.local`. Check `git status` and confirm that file is absent before you commit.
+This folder is the `20261001_CosplayFitter` project inside [kyalan/MiniProjects](https://github.com/kyalan/MiniProjects). After you change the code on this computer, commit and push from the MiniProjects checkout, not from a new repository created only for this folder. Do not commit `.env.local`, and do not add the other project folders in that checkout.
+
+From this folder:
 
 ```bash
 cd ..
-git remote -v
+git status
 git add 20261001_CosplayFitter
 git status
-git commit -m "Add Cosplay Fitter"
+git commit -m "Describe the change."
 git push origin HEAD
 ```
 
-`git remote -v` should show `https://github.com/kyalan/MiniProjects.git`. If `origin` is missing, add it once:
+The second `git status` should list only files under `20261001_CosplayFitter`. `.env.local` must stay untracked. `git remote -v` should show `https://github.com/kyalan/MiniProjects.git`. If `origin` is missing, add it once:
 
 ```bash
 git remote add origin https://github.com/kyalan/MiniProjects.git
 git push -u origin HEAD
 ```
+
+After the push succeeds, update the VM and restart the page. That is step 6 below.
 
 ## Deploy on a Google Cloud VM
 
@@ -146,7 +150,11 @@ gcloud compute ssh VM_NAME --zone=ZONE -- -L 3000:127.0.0.1:3000
 
 Leave that session open and visit [http://127.0.0.1:3000](http://127.0.0.1:3000). Sign in with the ID and password from the VM's `.env.local`. The tunnel ends when you close the SSH session.
 
-To update the VM after a later GitHub push, attach the session, stop the page with Ctrl-C, then start it again:
+The place line is always Hong Kong. Date and temperature in the outfit prompts follow Hong Kong weather from the web, not the city you are sitting in and not the VM’s public location. Whether Gemini is available is a separate lookup of this machine’s public IP against Google’s current available regions.
+
+### 6. Update the VM and restart
+
+SSH into the VM after the GitHub push. Pull the MiniProjects checkout, then restart the page so it serves the new build. `.env.local` is not in Git and stays as it is.
 
 ```bash
 cd /opt/miniprojects
@@ -154,12 +162,13 @@ git pull
 tmux attach -t cosplay-fitter
 ```
 
-Inside the session:
+Inside the session, stop the page with Ctrl-C. If there is no session yet, run `tmux new -s cosplay-fitter` instead of `tmux attach`. Then:
 
 ```bash
+cd /opt/miniprojects/20261001_CosplayFitter
 npm start
 ```
 
-Leave the session again with Ctrl-b, then d.
+If `package.json` changed, run `npm install` in that folder before `npm start`.
 
-The place line is always Hong Kong. Date and temperature in the outfit prompts follow Hong Kong weather from the web, not the city you are sitting in and not the VM’s public location. Whether Gemini is available is a separate lookup of this machine’s public IP against Google’s current available regions.
+`npm start` builds the page, then serves it. Leave the session with Ctrl-b, then d. The SSH tunnel from your computer can stay open. Refresh [http://127.0.0.1:3000](http://127.0.0.1:3000).

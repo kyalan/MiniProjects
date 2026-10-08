@@ -16,8 +16,6 @@ export function loadEnvLocal(file: string): void {
     ) {
       value = value.slice(1, -1);
     }
-    if (process.env[key] === undefined) {
-      process.env[key] = value;
-    }
+    process.env[key] = value;
   }
 }

@@ -21,6 +21,7 @@ import { countTokens, generateContent, GeminiRequestError, photoPart, type Gemin
 import { parseOutfits } from "./outfits.ts";
 import { lookupPlace, unavailablePlace } from "./place.ts";
 import { createPortraitLoader, type LoadPortrait } from "./portraits.ts";
+import { loadShopPreview } from "./shopPreview.ts";
 import { mapPool } from "./pool.ts";
 import {
   createSessionId,
@@ -137,6 +138,40 @@ export async function createApp(options: AppOptions): Promise<Express> {
       cacheDir: options.cacheDir ?? path.join(process.cwd(), "data", "acg-cache"),
     });
 
+  async function pricedEstimate(fitting: FittingInput, climate: Climate | null, apiKey: string) {
+    const direction = fittingDirection(fitting, climate);
+    const stylistText = stylistPromptFor({ ...fitting, climate });
+    const imageText = buildImagePrompt(SAMPLE_OUTFIT, direction);
+    const [stylistCount, previewCount] = await Promise.all([
+      countTokens({
+        apiKey,
+        parts: fittingParts(stylistText, fitting),
+        fetchImpl: options.fetchImpl,
+      }),
+      countTokens({
+        apiKey,
+        parts: fittingParts(imageText, fitting),
+        fetchImpl: options.fetchImpl,
+      }),
+    ]);
+    return estimateFitting({
+      topicId: fitting.topicId,
+      characterId: fitting.characterId,
+      count: fitting.count,
+      note: fitting.note,
+      resolution: fitting.resolution,
+      ...direction,
+      counted: {
+        stylistInputTokens: stylistCount.total,
+        imageInputTokensEach: previewCount.total,
+        stylistTextTokens: stylistCount.textTokens,
+        stylistImageTokens: stylistCount.imageTokens,
+        previewTextTokens: previewCount.textTokens,
+        previewImageTokens: previewCount.imageTokens,
+      },
+    });
+  }
+
   async function withPortrait(fitting: FittingInput): Promise<FittingInput> {
     const portrait = await loadPortrait(fitting.topicId, fitting.characterId);
     return portrait ? { ...fitting, references: [portrait] } : { ...fitting, references: [] };
@@ -150,11 +185,11 @@ export async function createApp(options: AppOptions): Promise<Express> {
   };
 
   app.get("/api/session", (req, res) => {
-    const authenticated = auth.signedIn(req);
+    const authenticated = authEnforced ? auth.signedIn(req) : true;
     res.json({
       authenticated,
-      configured: auth.credentials !== null,
-      admin: authenticated && auth.userId(req) === ADMIN_ID,
+      configured: auth.credentials !== null || !authEnforced,
+      admin: authenticated && (!authEnforced || auth.userId(req) === ADMIN_ID),
     });
   });
 
@@ -188,6 +223,19 @@ export async function createApp(options: AppOptions): Promise<Express> {
     res.json(await resolvePlace());
   });
 
+  app.get("/api/shop-preview", async (req, res) => {
+    const shop = typeof req.query.shop === "string" ? req.query.shop : "";
+    const query = typeof req.query.q === "string" ? req.query.q.slice(0, 200) : "";
+    const image = await loadShopPreview(shop, query, options.fetchImpl);
+    if (!image) {
+      res.status(404).end();
+      return;
+    }
+    res.setHeader("Content-Type", image.contentType);
+    res.setHeader("Cache-Control", "private, max-age=1800");
+    res.send(image.body);
+  });
+
   app.get("/api/acg/:topicId/:characterId/image", async (req, res) => {
     const portrait = await loadPortrait(req.params.topicId, req.params.characterId);
     if (!portrait) {
@@ -218,29 +266,7 @@ export async function createApp(options: AppOptions): Promise<Express> {
     const fitting = await withPortrait(parsed.value);
     const climate = climateFromPlace(place);
     try {
-      const stylistText = stylistPromptFor({ ...fitting, climate });
-      const imageText = buildImagePrompt(SAMPLE_OUTFIT, fittingDirection(fitting, climate));
-      const [stylistInputTokens, imageInputTokensEach] = await Promise.all([
-        countTokens({
-          apiKey: secret,
-          parts: fittingParts(stylistText, fitting),
-          fetchImpl: options.fetchImpl,
-        }),
-        countTokens({
-          apiKey: secret,
-          parts: fittingParts(imageText, fitting),
-          fetchImpl: options.fetchImpl,
-        }),
-      ]);
-      const estimate = estimateFitting({
-        topicId: fitting.topicId,
-        characterId: fitting.characterId,
-        count: fitting.count,
-        note: fitting.note,
-        resolution: fitting.resolution,
-        ...fittingDirection(fitting, climate),
-        counted: { stylistInputTokens, imageInputTokensEach },
-      });
+      const estimate = await pricedEstimate(fitting, climate, secret);
       res.json({ estimate });
     } catch (error) {
       res.status(502).json({ error: publicMessage(error, secret) });
@@ -274,7 +300,7 @@ export async function createApp(options: AppOptions): Promise<Express> {
 
     const sessionId = createSessionId();
     const dir = path.join(options.sessionsDir, sessionId);
-    const estimate = estimateFitting({
+    let estimate = estimateFitting({
       topicId: fitting.topicId,
       characterId: fitting.characterId,
       count: fitting.count,
@@ -282,6 +308,11 @@ export async function createApp(options: AppOptions): Promise<Express> {
       resolution: fitting.resolution,
       ...fittingDirection(fitting, climate),
     });
+    try {
+      estimate = await pricedEstimate(fitting, climate, secret);
+    } catch {
+      // Keep the published-table estimate when Gemini cannot count this photo.
+    }
     let failed = false;
     let actual: ActualUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
     const previews: PreviewRecord[] = [];

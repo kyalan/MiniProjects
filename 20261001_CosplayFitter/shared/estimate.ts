@@ -32,26 +32,41 @@ export function formatUsd(amount: number): string {
 export interface CountedInputTokens {
   stylistInputTokens: number;
   imageInputTokensEach: number;
+  stylistTextTokens?: number;
+  stylistImageTokens?: number;
+  previewTextTokens?: number;
+  previewImageTokens?: number;
 }
 
 function splitInput(
   countedTotal: number | undefined,
   fallbackText: string,
   imageCount: number,
-): { image: number; text: number; textNote: TokenLine["note"] } {
+): { image: number; text: number; textNote: TokenLine["note"]; imageNote: TokenLine["note"] } {
   const publishedImages = INPUT_IMAGE_TOKENS * imageCount;
   if (countedTotal === undefined) {
     return {
       image: publishedImages,
       text: estimateTextTokens(fallbackText),
       textNote: "estimated",
+      imageNote: "published",
     };
   }
   return {
     image: publishedImages,
     text: Math.max(0, countedTotal - publishedImages),
     textNote: "counted",
+    imageNote: "published",
   };
+}
+
+function exactInput(
+  textTokens: number | undefined,
+  imageTokens: number | undefined,
+  fallback: { image: number; text: number; textNote: TokenLine["note"]; imageNote: TokenLine["note"] },
+): { image: number; text: number; textNote: TokenLine["note"]; imageNote: TokenLine["note"] } {
+  if (textTokens === undefined || imageTokens === undefined) return fallback;
+  return { image: imageTokens, text: textTokens, textNote: "counted", imageNote: "counted" };
 }
 
 export function estimateFitting(input: {
@@ -89,20 +104,30 @@ export function estimateFitting(input: {
     direction,
   });
   const imagePrompt = buildImagePrompt(SAMPLE_OUTFIT, direction);
-  const stylist = splitInput(input.counted?.stylistInputTokens, stylistPrompt, imagesPerCall);
-  const image = splitInput(input.counted?.imageInputTokensEach, imagePrompt, imagesPerCall);
+  const stylistFallback = splitInput(input.counted?.stylistInputTokens, stylistPrompt, imagesPerCall);
+  const previewFallback = splitInput(input.counted?.imageInputTokensEach, imagePrompt, imagesPerCall);
+  const stylist = exactInput(
+    input.counted?.stylistTextTokens,
+    input.counted?.stylistImageTokens,
+    stylistFallback,
+  );
+  const image = exactInput(
+    input.counted?.previewTextTokens,
+    input.counted?.previewImageTokens,
+    previewFallback,
+  );
   const stylistTextOut = stylistOutputTextTokens(input.count);
   const captionTextOut = CAPTION_OUTPUT_TEXT_TOKENS * input.count;
   const previewImageOut = OUTPUT_IMAGE_TOKENS[input.resolution] * input.count;
 
   const lines: TokenLine[] = [
-    { label: "Stylist · input image", tokens: stylist.image, note: "published" },
+    { label: "Stylist · input image", tokens: stylist.image, note: stylist.imageNote },
     { label: "Stylist · input text", tokens: stylist.text, note: stylist.textNote },
     { label: "Stylist · output text", tokens: stylistTextOut, note: "estimated" },
     {
       label: `Previews · input image × ${input.count}`,
       tokens: image.image * input.count,
-      note: "published",
+      note: image.imageNote,
     },
     {
       label: `Previews · input text × ${input.count}`,

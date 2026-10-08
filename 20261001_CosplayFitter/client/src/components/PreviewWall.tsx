@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { shopItems, type ShopLink } from "@shared/shops.ts";
 import type { Outfit } from "@shared/types.ts";
 import { downloadUrl, slugify } from "../lib/stream.ts";
 
@@ -74,11 +76,12 @@ export function PreviewWall({ cards, phase, characterName, admin, session, onDow
                 <p className="look-index">Look {card.index}</p>
                 <h3>{card.outfit.name}</h3>
                 <p>{card.outfit.why}</p>
-                <ul>
+                <ul className="garments">
                   {card.outfit.garments.map((garment) => (
                     <li key={garment}>{garment}</li>
                   ))}
                 </ul>
+                <ShopAdvice characterName={characterName} outfit={card.outfit} />
                 {card.error ? <p className="look-error">{card.error}</p> : null}
                 {card.imageUrl ? (
                   <button
@@ -100,5 +103,43 @@ export function PreviewWall({ cards, phase, characterName, admin, session, onDow
         </div>
       )}
     </section>
+  );
+}
+
+function ShopLinkChip({ link }: { link: ShopLink }) {
+  const [picture, setPicture] = useState(true);
+  const src = `/api/shop-preview?shop=${encodeURIComponent(link.id)}&q=${encodeURIComponent(link.query)}`;
+  return (
+    <a href={link.href} target="_blank" rel="noopener noreferrer" title={link.query}>
+      {picture ? <img src={src} alt="" onError={() => setPicture(false)} /> : null}
+      {link.name}
+    </a>
+  );
+}
+
+function ShopAdvice({ characterName, outfit }: { characterName: string; outfit: Outfit }) {
+  const items = shopItems(characterName, outfit);
+  if (items.length === 0) return null;
+  return (
+    <div className="shop-advice">
+      <p className="shop-label">Shop this look</p>
+      <p className="shop-note">
+        Each piece has its own purchase search. Taobao and AliExpress use simplified Chinese.
+      </p>
+      <ul className="shop-items">
+        {items.map((item) => (
+          <li key={item.garment}>
+            <p className="shop-item-name">{item.garment}</p>
+            <ul className="shop-links" data-testid="shop-links">
+              {item.links.map((link) => (
+                <li key={link.id}>
+                  <ShopLinkChip link={link} />
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

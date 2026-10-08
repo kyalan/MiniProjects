@@ -17,7 +17,7 @@ export function TokenReceipt({ estimate, refineState, pendingReason, actual }: T
           {refineState === "loading"
             ? "Asking Gemini to count the input text…"
             : refineState === "refined"
-              ? "Input text counted by Gemini. Image tokens use the published table."
+              ? "Gemini counted the photo and the input text. Output images still use the published 1K and 2K table."
               : refineState === "failed"
                 ? "Gemini could not recount the input. Image tokens still use the published table."
                 : "Text is estimated at about 4 characters per token. Image tokens use the published table."}
