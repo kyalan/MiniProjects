@@ -1,0 +1,107 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% trans "LCSD fitness rooms" %}</title>
+  <link rel="stylesheet" href="{% static 'venues/vendor/leaflet/leaflet.css' %}">
+  <link rel="stylesheet" href="{% static 'venues/vendor/maplibre/maplibre-gl.css' %}">
+  <link rel="stylesheet" href="{% static 'venues/vendor/markercluster/MarkerCluster.css' %}">
+  <link rel="stylesheet" href="{% static 'venues/vendor/markercluster/MarkerCluster.Default.css' %}">
+  <link rel="stylesheet" href="{% static 'venues/map.css' %}">
+  {{ i18n|json_script:"i18n-data" }}
+</head>
+<body
+  data-venues="{% url 'venues-api' %}"
+  data-detail="{% url 'venue-detail' 999999 %}"
+  data-sync="{% url 'sync-start' %}"
+  data-status="{% url 'sync-status' %}"
+  data-csrf="{{ csrf_token }}"
+  data-venue="{{ request.GET.venue|default:'' }}"
+  data-map-worker="{% static 'venues/vendor/maplibre/maplibre-gl-csp-worker.js' %}"
+>
+  <header class="topbar">
+    <div class="brand">
+      <p class="eyebrow">{% trans "Leisure and Cultural Services Department" %}</p>
+      <h1>{% trans "LCSD fitness rooms" %}</h1>
+    </div>
+    <div class="top-actions">
+      <p id="updated" class="updated">
+        {% if last_success %}
+          {% trans "Last updated" %} <time datetime="{{ last_success|date:'c' }}">{{ last_success|date:"Y-m-d H:i" }}</time>
+        {% else %}
+          {% trans "Not updated yet" %}
+        {% endif %}
+      </p>
+      <button id="update-btn" type="button">{% trans "Update data" %}</button>
+      <p id="sync-state" class="sync-state" role="status"></p>
+      <details class="sync-log">
+        <summary>{% trans "Sync log" %}</summary>
+        <pre id="sync-log"></pre>
+      </details>
+      <form id="lang-form" action="{% url 'set_language' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <label for="lang">{% trans "Language" %}</label>
+        {% get_current_language as CURRENT %}
+        <select id="lang" name="language">
+          <option value="zh-hant" {% if CURRENT == "zh-hant" %}selected{% endif %}>繁體中文</option>
+          <option value="zh-hans" {% if CURRENT == "zh-hans" %}selected{% endif %}>简体中文</option>
+          <option value="en" {% if CURRENT == "en" %}selected{% endif %}>English</option>
+        </select>
+      </form>
+      <a class="admin-link" href="{% url 'admin:index' %}">{% trans "Database" %}</a>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar">
+      <form id="filters" class="filters">
+        <label class="search-label" for="search">{% trans "Search name or address" %}</label>
+        <input id="search" type="search" placeholder="{% trans "Search name or address" %}" autocomplete="off">
+        <label for="district">{% trans "District" %}</label>
+        <select id="district">
+          <option value="">{% trans "All districts" %}</option>
+          {% for name in districts %}
+            <option value="{{ name }}">{{ name }}</option>
+          {% endfor %}
+        </select>
+        <label for="region">{% trans "Region" %}</label>
+        <select id="region">
+          <option value="">{% trans "All regions" %}</option>
+          <option value="hk_island">{% trans "Hong Kong Island" %}</option>
+          <option value="kowloon">{% trans "Kowloon" %}</option>
+          <option value="nt">{% trans "New Territories" %}</option>
+        </select>
+        <label for="equipment-category">{% trans "Equipment category" %}</label>
+        <select id="equipment-category">
+          <option value="">{% trans "All equipment" %}</option>
+        </select>
+        <label class="check"><input id="accessible" type="checkbox"> {% trans "Accessible equipment only" %}</label>
+        <label class="check"><input id="open-now" type="checkbox"> {% trans "Open now" %}</label>
+        <button id="near-me" type="button">{% trans "Near me" %}</button>
+        <p id="location-note" class="meta" role="status"></p>
+      </form>
+      <p id="result-count" class="result-count"></p>
+      <div id="list" class="list"></div>
+      <p class="source">{% trans "Source: Leisure and Cultural Services Department via data.gov.hk" %}</p>
+    </aside>
+    <div class="map-pane">
+      <div id="map"></div>
+      <ul class="legend">
+        <li><i class="swatch swatch-open"></i>{% trans "Free for the next 2 hours" %}</li>
+        <li><i class="swatch swatch-soon"></i>{% trans "Closes or occupied within 2 hours" %}</li>
+        <li><i class="swatch swatch-other"></i>{% trans "No opening data" %}</li>
+      </ul>
+      <section id="drawer" class="drawer" aria-live="polite"></section>
+    </div>
+  </div>
+
+  <script src="{% static 'venues/vendor/leaflet/leaflet.js' %}"></script>
+  <script src="{% static 'venues/vendor/maplibre/maplibre-gl-csp.js' %}"></script>
+  <script src="{% static 'venues/vendor/maplibre/leaflet-maplibre-gl.js' %}"></script>
+  <script src="{% static 'venues/vendor/markercluster/leaflet.markercluster.js' %}"></script>
+  <script src="{% static 'venues/map.js' %}"></script>
+</body>
+</html>

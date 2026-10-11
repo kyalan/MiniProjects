@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gymrooms}
+      POSTGRES_USER: ${POSTGRES_USER:-gymrooms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gymrooms}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymrooms -d gymrooms"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build: .
+    image: gymrooms:local
+    ports:
+      - "8000:8000"
+    environment: &app-env
+      POSTGRES_DB: ${POSTGRES_DB:-gymrooms}
+      POSTGRES_USER: ${POSTGRES_USER:-gymrooms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gymrooms}
+      POSTGRES_HOST: db
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-only-change-me}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-gymrooms-admin}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  worker:
+    build: .
+    image: gymrooms:local
+    command: python manage.py run_sync_worker
+    environment: *app-env
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  pgdata:

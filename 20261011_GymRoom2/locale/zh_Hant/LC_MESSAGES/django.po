@@ -1,0 +1,255 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: gymrooms\n"
+"Language: zh_Hant\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+
+msgid "Area"
+msgstr "面積"
+
+msgid "Phone"
+msgstr "電話"
+
+msgid "Equipment"
+msgstr "健身器械"
+
+msgid "Shared use"
+msgstr "可供殘疾人士共用"
+
+msgid "Opening hours"
+msgstr "開放時間"
+
+msgid "Available"
+msgstr "開放"
+
+msgid "Programme"
+msgstr "活動"
+
+msgid "Training"
+msgstr "訓練"
+
+msgid "Block booking"
+msgstr "團體預訂"
+
+msgid "Maintenance"
+msgstr "保養日"
+
+msgid "Sessional break"
+msgstr "暫停開放時刻"
+
+msgid "Hourly ticket quota"
+msgstr "時票名額"
+
+msgid "Monthly ticket quota"
+msgstr "月票名額"
+
+msgid "Official page"
+msgstr "官方頁面"
+
+msgid "Close"
+msgstr "關閉"
+
+msgid "Location unavailable"
+msgstr "未能顯示位置"
+
+msgid "No rooms match these filters."
+msgstr "沒有符合條件的健身室。"
+
+msgid "No timetable for this month."
+msgstr "本月尚未有時間表。"
+
+msgid "Timetable is for reference only. Please contact venue staff for the latest booking status."
+msgstr "時間表只供參考，請向場地職員查詢最新預訂情況。"
+
+msgid "sets"
+msgstr "套"
+
+msgid "Room"
+msgstr "健身室"
+
+msgid "rooms"
+msgstr "所健身室"
+
+msgid "Could not load rooms."
+msgstr "未能載入健身室。"
+
+msgid "Could not load this room."
+msgstr "未能載入此健身室。"
+
+msgid "Available now"
+msgstr "現正開放"
+
+msgid "Not open now"
+msgstr "現時未開放"
+
+msgid "No opening data"
+msgstr "未有開放資料"
+
+msgid "Last updated"
+msgstr "最後更新"
+
+msgid "Not updated yet"
+msgstr "尚未更新"
+
+msgid "Queued"
+msgstr "排隊中"
+
+msgid "Running"
+msgstr "更新中"
+
+msgid "Succeeded"
+msgstr "已完成"
+
+msgid "Failed"
+msgstr "失敗"
+
+msgid "Update already running"
+msgstr "更新正在進行"
+
+msgid "Please wait before updating again"
+msgstr "請稍後再更新"
+
+msgid "Issued"
+msgstr "發出日期"
+
+msgid "Source updated"
+msgstr "資料更新日期"
+
+msgid "Timetable was not published."
+msgstr "尚未公布時間表。"
+
+msgid "Timetable could not be read."
+msgstr "未能讀取時間表。"
+
+msgid "Download failed."
+msgstr "下載失敗。"
+
+msgid "No fitness rooms stored yet. Press Update data to load them."
+msgstr "尚未儲存健身室資料。請按「更新資料」從康文署載入。"
+
+msgid "Full timetable"
+msgstr "完整時間表"
+
+msgid "Fitness equipment"
+msgstr "健身器械"
+
+msgid "Sync log"
+msgstr "更新紀錄"
+
+msgid "Hong Kong Island"
+msgstr "香港島"
+
+msgid "Kowloon"
+msgstr "九龍"
+
+msgid "New Territories"
+msgstr "新界"
+
+msgid "LCSD fitness rooms"
+msgstr "康文署健身室"
+
+msgid "Leisure and Cultural Services Department"
+msgstr "康樂及文化事務署"
+
+msgid "Language"
+msgstr "語言"
+
+msgid "Update data"
+msgstr "更新資料"
+
+msgid "Database"
+msgstr "資料庫"
+
+msgid "Search name or address"
+msgstr "搜尋名稱或地址"
+
+msgid "All districts"
+msgstr "全部地區"
+
+msgid "All regions"
+msgstr "全部區域"
+
+msgid "District"
+msgstr "地區"
+
+msgid "Region"
+msgstr "區域"
+
+msgid "Accessible equipment only"
+msgstr "只顯示可供殘疾人士共用的健身室"
+
+msgid "Open now"
+msgstr "現正開放"
+
+msgid "Source: Leisure and Cultural Services Department via data.gov.hk"
+msgstr "資料來源：康樂及文化事務署（data.gov.hk）"
+
+msgid "Other or unknown"
+msgstr "其他或未有資料"
+
+msgid "Update queued."
+msgstr "已加入更新隊列。"
+
+msgid "LCSD fitness room database"
+msgstr "康文署健身室資料庫"
+
+msgid "Database tables"
+msgstr "資料表"
+
+msgid "Free for the next 2 hours"
+msgstr "未來兩小時均可使用"
+
+msgid "Closes or occupied within 2 hours"
+msgstr "未來兩小時內將關閉或被佔用"
+
+msgid "Near me"
+msgstr "附近"
+
+msgid "Could not read your location"
+msgstr "未能讀取你的位置"
+
+msgid "m"
+msgstr "米"
+
+msgid "km"
+msgstr "公里"
+
+msgid "Treadmills"
+msgstr "跑步機"
+
+msgid "Bikes"
+msgstr "單車"
+
+msgid "Ellipticals"
+msgstr "橢圓機"
+
+msgid "Rowing machines"
+msgstr "划艇機"
+
+msgid "Free weights"
+msgstr "自由重量"
+
+msgid "Upper-body machines"
+msgstr "上肢器械"
+
+msgid "Lower-body machines"
+msgstr "下肢器械"
+
+msgid "Core"
+msgstr "核心"
+
+msgid "Cables and multi-stations"
+msgstr "滑輪及綜合器械"
+
+msgid "Other equipment"
+msgstr "其他器械"
+
+msgid "All equipment"
+msgstr "全部器械"
+
+msgid "Equipment category"
+msgstr "器械類別"
